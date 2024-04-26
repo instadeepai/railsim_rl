@@ -1,27 +1,28 @@
-import jpype
-
-# Enable Java imports
-import jpype.imports
 from gymnasium.spaces import Box, Discrete, Tuple
 import numpy as np
 import math
-
-# from typing import *
+from collections import namedtuple
+import jpype
+import jpype.imports
 
 # Pull in types
-# from jpype.types import *
-
+from jpype.types import *
 
 class Railsim:
 
-    def __init__(self, jar_path: str) -> None:
+    def __init__(self, jar_path: str, num_agents: int, depth_obs_tree: int) -> None:
         # Launch the JVM
         jpype.startJVM(classpath=[jar_path])
 
-        # Get a list of agent Ids
-        self.agent_ids: list[int] = None
+        self.depth_obs_tree: int = depth_obs_tree
+        self.num_agents = num_agents
 
-        # Import java class from the classpath
+        # Create environment
+        from railsim_dummy import Env
+
+        random = True
+        self.env = Env(num_agents, self.depth_obs_tree, random)
+        self.agent_ids = self.env.getAgents()
 
         """
         For each agent i
@@ -35,14 +36,11 @@ class Railsim:
         len(position_next_node) = 2
         """
 
-        # Get the depth of observation tree
-        depth_obs_tree: int = None
-
         # Observation space of single agent
         obs_space_single_agent = Tuple(
             (
                 Box(
-                    shape=(math.pow(2, depth_obs_tree + 1),),
+                    shape=(int(math.pow(2, self.depth_obs_tree + 1)),),
                     low=-math.inf,
                     high=math.inf,
                     dtype=np.float32,
@@ -67,26 +65,84 @@ class Railsim:
         """
         self.action_space = {aid: Discrete(3) for aid in self.agent_ids}
 
+        self.ObservationTuple = namedtuple(
+            "ObservationTuple", ["obs_tree", "train_state", "position_next_node"]
+        )
+
     def agent_space(self, aid: any):
         return self.action_space[aid]
 
     def observation_space(self, aid: any):
         return self.observation_space[aid]
 
-    def reset() -> tuple[list[float], list[float]]:
+    def reset(self) -> tuple[dict[str, any], dict[str, any]]:
         """
         Return observations: dict[int, list[int | list]] and infos: dict[int, dict[str, bool | list | float]]
         """
-        pass
+        multi_agent_obs: dict = {}
+        multi_agent_info: dict = {}
+        resetOutput = self.env.reset()
+        for aid in resetOutput.keys():
+            obs = resetOutput[aid].getObs()
+            multi_agent_obs[aid] = self.ObservationTuple(
+                obs_tree=list(obs.getObsTree()),
+                train_state=list(obs.getTrainState()),
+                position_next_node=list(obs.getPositionNextNode()),
+            )
+            multi_agent_info[aid] = dict(resetOutput[aid].getInfo())
 
+        return multi_agent_obs, multi_agent_info
+    
+    # TODO: Define reward function
+    def _calc_reward(self, obs=None):
+        return 0.0
+
+    # TODO: Check how the dict from python looks like in JAVA environment
     def step(
-        action_dict: dict[str, int]
-    ) -> tuple[list[float], list[float], dict[str, bool], dict[str, bool], list[float]]:
-        pass
+        self, action_dict: dict[str, int]
+    ) -> tuple[
+        dict[str, tuple], dict[str, float], dict[str, bool], dict[str, bool], dict[str, any]
+    ]:
+        multi_agent_obs: dict = {}
+        multi_agent_rewards: dict = {}
+        multi_agent_terminated: dict = {}
+        multi_agent_truncated: dict = {}
+        multi_agent_info: dict = {}
+
+        stepOutputDict = self.env.step(action_dict)
+        for aid, stepOutput in stepOutputDict.items():
+            obs = stepOutput.getObservation()
+            multi_agent_obs[aid] = self.ObservationTuple(
+                obs_tree=list(obs.getObsTree()),
+                train_state=list(obs.getTrainState()),
+                position_next_node=list(obs.getPositionNextNode()),
+            )
+            multi_agent_info[aid] = dict(stepOutput.getInfo())
+            multi_agent_terminated[aid] = bool(stepOutput.isTerminated())
+            multi_agent_truncated[aid] = bool(stepOutput.isTruncated())
+            multi_agent_rewards[aid] = self._calc_reward(multi_agent_obs[aid])
+
+        return (
+            multi_agent_obs,
+            multi_agent_rewards,
+            multi_agent_terminated,
+            multi_agent_truncated,
+            multi_agent_info,
+        )
 
     @property
-    def agents():
+    def agents(self):
         """
         Return the list of agents IDs of all the agents
         """
-        pass
+        return self.agent_ids
+
+
+if __name__ == "__main__":
+    railsim_env = Railsim(
+        jar_path="/Users/akashsinha/Documents/railsim_rl/DummyEnv/target/DummyEnv-1.0-SNAPSHOT.jar",
+        num_agents=3,
+        depth_obs_tree=2,
+    )
+    multi_agent_obs, multi_agent_info = railsim_env.reset()
+    x = railsim_env.step(action_dict={})
