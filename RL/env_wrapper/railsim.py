@@ -1,3 +1,4 @@
+from typing import Optional
 from gymnasium.spaces import Box, Discrete, Tuple
 import numpy as np
 import math
@@ -7,6 +8,7 @@ import jpype.imports
 
 # Pull in types
 from jpype.types import *
+
 
 class Railsim:
 
@@ -40,7 +42,7 @@ class Railsim:
         obs_space_single_agent = Tuple(
             (
                 Box(
-                    shape=(int(math.pow(2, self.depth_obs_tree + 1)),),
+                    shape=(17 * int(math.pow(2, self.depth_obs_tree + 1) - 1),),
                     low=-math.inf,
                     high=math.inf,
                     dtype=np.float32,
@@ -54,7 +56,7 @@ class Railsim:
                 ),
             )
         )
-        self.observation_space = {aid: obs_space_single_agent for aid in self.agent_ids}
+        self.obs_space = {aid: obs_space_single_agent for aid in self.agent_ids}
 
         # Create a dict storing action_space corresponding to each agent
         """
@@ -63,19 +65,21 @@ class Railsim:
         1: Change direction
         2: Stop
         """
-        self.action_space = {aid: Discrete(3) for aid in self.agent_ids}
+        self.act_space = {aid: Discrete(3) for aid in self.agent_ids}
 
         self.ObservationTuple = namedtuple(
             "ObservationTuple", ["obs_tree", "train_state", "position_next_node"]
         )
 
-    def agent_space(self, aid: any):
-        return self.action_space[aid]
+    def action_space(self, aid: any):
+        return self.act_space[aid]
 
     def observation_space(self, aid: any):
-        return self.observation_space[aid]
+        return self.obs_space[aid]
 
-    def reset(self) -> tuple[dict[str, any], dict[str, any]]:
+    def reset(
+        self, *, seed: Optional[int] = None, options: Optional[dict] = None
+    ) -> tuple[dict[str, any], dict[str, any]]:
         """
         Return observations: dict[int, list[int | list]] and infos: dict[int, dict[str, bool | list | float]]
         """
@@ -84,24 +88,27 @@ class Railsim:
         resetOutput = self.env.reset()
         for aid in resetOutput.keys():
             obs = resetOutput[aid].getObs()
-            multi_agent_obs[aid] = self.ObservationTuple(
-                obs_tree=list(obs.getObsTree()),
-                train_state=list(obs.getTrainState()),
-                position_next_node=list(obs.getPositionNextNode()),
+            multi_agent_obs[aid] = (
+                np.array(list(obs.getObsTree()), dtype=np.float32),
+                np.array(list(obs.getTrainState()), dtype=np.float32),
+                np.array(list(obs.getPositionNextNode()), dtype=np.float32),
             )
+
             multi_agent_info[aid] = dict(resetOutput[aid].getInfo())
 
         return multi_agent_obs, multi_agent_info
-    
+
     # TODO: Define reward function
     def _calc_reward(self, obs=None):
-        return 0.0
+        return 1.0
 
     # TODO: Check how the dict from python looks like in JAVA environment
-    def step(
-        self, action_dict: dict[str, int]
-    ) -> tuple[
-        dict[str, tuple], dict[str, float], dict[str, bool], dict[str, bool], dict[str, any]
+    def step(self, action_dict: dict[str, int]) -> tuple[
+        dict[str, tuple],
+        dict[str, float],
+        dict[str, bool],
+        dict[str, bool],
+        dict[str, any],
     ]:
         multi_agent_obs: dict = {}
         multi_agent_rewards: dict = {}
@@ -112,10 +119,10 @@ class Railsim:
         stepOutputDict = self.env.step(action_dict)
         for aid, stepOutput in stepOutputDict.items():
             obs = stepOutput.getObservation()
-            multi_agent_obs[aid] = self.ObservationTuple(
-                obs_tree=list(obs.getObsTree()),
-                train_state=list(obs.getTrainState()),
-                position_next_node=list(obs.getPositionNextNode()),
+            multi_agent_obs[aid] = (
+                np.array(list(obs.getObsTree()), dtype=np.float32),
+                np.array(list(obs.getTrainState()), dtype=np.float32),
+                np.array(list(obs.getPositionNextNode()), dtype=np.float32),
             )
             multi_agent_info[aid] = dict(stepOutput.getInfo())
             multi_agent_terminated[aid] = bool(stepOutput.isTerminated())
@@ -136,6 +143,10 @@ class Railsim:
         Return the list of agents IDs of all the agents
         """
         return self.agent_ids
+    
+    def close(self):
+        # TODO: What should be done here?
+        pass
 
 
 if __name__ == "__main__":

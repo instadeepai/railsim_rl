@@ -6,7 +6,7 @@ import java.util.*;
 class Observation{
 
     List<Double> obsTree = new ArrayList<>();
-    double[] trainState = new double[5];
+    double[] trainState = new double[4];
     double[] positionNextNode = new double[2];
     public List<Double> getObsTree() {
         return obsTree;
@@ -43,7 +43,7 @@ class Observation{
     }
 
     public void generateRandomObservation(double depthObservationTree){
-        for (int i= 0; i<5; i++){
+        for (int i= 0; i<4; i++){
             this.trainState[i] = Math.random();
         }
         for (int i= 0; i<2; i++){
