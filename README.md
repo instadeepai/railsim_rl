@@ -19,3 +19,12 @@ mypy
 ````
 
 Pre-commit hooks will run automatically at commit on staged files only.
+
+
+### Docker commands
+
+## Build docker image
+docker build . -f railsim.Dockerfile -t rl_railsim
+
+## Start the container
+docker run -it --name rl_railsim -v .:/app rl_railsim

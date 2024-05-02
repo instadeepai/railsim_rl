@@ -1,4 +1,4 @@
-"ray[rllib]"
+ray[rllib]
 gymnasium
 jpype1
 numpy

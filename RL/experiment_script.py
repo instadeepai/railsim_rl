@@ -21,6 +21,7 @@ import ray
 from ray import air, tune
 from ray.air.integrations.wandb import WandbLoggerCallback
 from ray.rllib.utils.framework import try_import_torch
+
 # from ray.rllib.utils.metrics import (
 #     DIFF_NUM_GRAD_UPDATES_VS_SAMPLER_POLICY,
 #     NUM_ENV_STEPS_SAMPLED,
@@ -28,6 +29,7 @@ from ray.rllib.utils.framework import try_import_torch
 # )
 # from ray.rllib.utils.nested_dict import NestedDict
 from ray.rllib.utils.typing import ResultDict
+
 # from ray.rllib.utils.error import UnsupportedSpaceException
 
 
@@ -36,6 +38,7 @@ from ray.tune import CLIReporter
 
 if TYPE_CHECKING:
     from ray.rllib.algorithms import AlgorithmConfig
+
     # from ray.rllib.offline.dataset_reader import DatasetReader
 
 
@@ -269,7 +272,10 @@ def run_rllib_example_script_experiment(
         algo = config.build()
         for iter in range(args.stop_iters):
             results = algo.train()
-            print(f"R={results['sampler_results']['episode_reward_mean']}", end="")
+            # print(f"R={results['sampler_results']['episode_reward_mean']}", end="")
+            print(
+                f"policy loss: {results['learner_results']['p0']['policy_loss']}, value loss: {results['learner_results']['p0']['vf_loss']}"
+            )
             if "evaluation" in results:
                 Reval = results["evaluation"]["sampler_results"]["episode_reward_mean"]
                 print(f" R(eval)={Reval}", end="")

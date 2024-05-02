@@ -6,3 +6,5 @@ DummyEnv/target/
 RL/.DS_Store
 DummyEnv/.gitignore
 sbbvenv
+.vscode
+.mypy_cache

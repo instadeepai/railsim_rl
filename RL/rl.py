@@ -13,7 +13,7 @@ from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 # from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import get_trainable_cls, register_env
 
-from RL.experiment_script import (
+from experiment_script import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
 )
@@ -22,8 +22,7 @@ from RL.experiment_script import (
 def env_creator(args):
     env = ParallelPettingZooEnv(
         Railsim(
-            jar_path="/Users/akashsinha/Documents/railsim_rl/DummyEnv/"
-            "target/DummyEnv-1.0-SNAPSHOT.jar",
+            jar_path="DummyEnv/target/DummyEnv-1.0-SNAPSHOT.jar",
             num_agents=3,
             depth_obs_tree=2,
         )
@@ -89,7 +88,6 @@ parser = add_rllib_example_script_args(
 
 if __name__ == "__main__":
     args = parser.parse_args()
-
     assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
     assert (
         args.enable_new_api_stack
