@@ -24,7 +24,9 @@ Pre-commit hooks will run automatically at commit on staged files only.
 ### Docker commands
 
 ## Build docker image
-docker build . -f railsim.Dockerfile -t rl_railsim
+docker build . -f railsim.Dockerfile -t rl_railsim_cuda
 
 ## Start the container
 docker run -it --name rl_railsim -v .:/app rl_railsim
+
+docker run -it --name railsim_cuda -v .:/app railsim_cuda
