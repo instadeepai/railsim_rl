@@ -1,3 +1,5 @@
+"ray[rllib]"
 gymnasium
 jpype1
 numpy
+torch
