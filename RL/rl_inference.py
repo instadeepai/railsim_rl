@@ -11,6 +11,8 @@ from railsim_pb2_grpc import (
 )
 import railsim_pb2
 import grpc
+import numpy as np
+from ray.rllib.policy.policy import Policy
 
 
 class RailsimConnecter(RailsimConnecterServicer):
@@ -19,17 +21,28 @@ class RailsimConnecter(RailsimConnecterServicer):
         print("got a call")
         print(request)
 
+        # Use the restored policy for serving actions.
+        my_restored_policy = Policy.from_checkpoint(
+            "RL/checkpoint/p0"
+        )
+
+        action_map = railsim_pb2.ActionMap()
+        
         # Process the request and convert to a python object
-        observation_tuple = []
+        observation_dict = {}
         for key, observation in request.dictObservation.items():
             obs_tree = list(observation.obsTree)
             train_state = list(observation.trainState)
             position_next_node = list(observation.positionNextNode)
-            observation_tuple.append((key, obs_tree, train_state,
-                                      position_next_node))
+            observation_dict[key] = np.concatenate(
+                (
+                    np.array(obs_tree, dtype=np.float32),
+                    np.array(train_state, dtype=np.float32),
+                    np.array(position_next_node, dtype=np.float32),
+                )
+            )
+            action_map.dictAction[key] = np.argmax(my_restored_policy.compute_single_action(observation_dict[key])[2]['action_dist_inputs'])
 
-        action_map = railsim_pb2.ActionMap()
-        action_map.dictAction["train1"] = 0
         return action_map
 
 
@@ -42,5 +55,6 @@ def serve():
 
 
 if __name__ == "__main__":
+
     print(f"listenig to port: {50051}")
     serve()

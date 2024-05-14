@@ -173,4 +173,5 @@ if __name__ == "__main__":
     )
     multi_agent_obs, multi_agent_info = railsim_env.reset()
     x = railsim_env.step(action_dict={})
+
     print("testing over")

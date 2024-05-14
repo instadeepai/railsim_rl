@@ -70,7 +70,7 @@ public class RLClient {
         try {
             RLClient client = new RLClient(channel);
             railsim_dummy.Observation ob = new railsim_dummy.Observation(2, true);
-            Map<String, railsim_dummy.Observation> obMap = Map.of("train1", ob);
+            Map<String, railsim_dummy.Observation> obMap = Map.of("0", ob);
             Map<String, Integer> actionMap = client.getAction(obMap);
             System.out.println(actionMap);
 
