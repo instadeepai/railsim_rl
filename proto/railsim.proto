@@ -1,0 +1,53 @@
+syntax = "proto3";
+option java_multiple_files = true;
+
+option java_package = "proto";
+
+
+message Observation {
+    repeated double obsTree = 1;
+    repeated double trainState = 2;
+    repeated double positionNextNode = 3;
+}
+
+message StepOutput {
+    Observation observation = 1;
+    double reward = 2;
+    bool terminated = 3;
+    bool truncated = 4;
+    map<string, string> info = 5;
+}
+
+message ResetOutput {
+    Observation obs = 1;
+    map<string, string> info = 2;
+}
+
+message StepOutputMap {
+    map<string, StepOutput> dictStepOutput= 1;
+}
+
+message ResetOutputMap {
+    map<string, ResetOutput> dictResetOutput= 1;
+}
+
+message ActionMap{
+    map<string, int32> dictAction = 1;
+}
+
+message ObservationMap {
+    map<string, Observation> dictObservation= 1;
+}
+
+message String{
+    String msg = 1;
+}
+service RailsimConnecter {
+    // rpc reset (String) returns (ResetOutputMap) {};
+
+    // rpc getAction (StepOutputMap) returns (ActionMap) {};
+    
+    rpc getAction (ObservationMap) returns (ActionMap) {};
+
+}
+

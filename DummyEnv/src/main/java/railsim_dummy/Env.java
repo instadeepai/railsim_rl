@@ -6,8 +6,8 @@ import java.util.*;
 class Observation{
 
     List<Double> obsTree = new ArrayList<>();
-    double[] trainState = new double[4];
-    double[] positionNextNode = new double[2];
+    List<Double> trainState = new ArrayList<Double>(4);
+    List<Double> positionNextNode = new ArrayList<Double>(2);
     public List<Double> getObsTree() {
         return obsTree;
     }
@@ -16,19 +16,19 @@ class Observation{
         this.obsTree = obsTree;
     }
 
-    public double[] getTrainState() {
+    public List<Double> getTrainState() {
         return trainState;
     }
 
-    public void setTrainState(double[] trainState) {
+    public void setTrainState(List<Double> trainState) {
         this.trainState = trainState;
     }
 
-    public double[] getPositionNextNode() {
+    public List<Double> getPositionNextNode() {
         return positionNextNode;
     }
 
-    public void setPositionNextNode(double[] positionNextNode) {
+    public void setPositionNextNode(List<Double> positionNextNode) {
         this.positionNextNode = positionNextNode;
     }
 
@@ -37,17 +37,17 @@ class Observation{
     public String toString() {
         return "Observation{" +
                 "obsTree=" + obsTree +
-                ", trainState=" + Arrays.toString(trainState) +
-                ", positionNextNode=" + Arrays.toString(positionNextNode) +
+                ", trainState=" + trainState +
+                ", positionNextNode=" + positionNextNode +
                 '}';
     }
 
     public void generateRandomObservation(double depthObservationTree){
         for (int i= 0; i<4; i++){
-            this.trainState[i] = Math.random();
+            this.trainState.add(i, Math.random());
         }
         for (int i= 0; i<2; i++){
-            this.positionNextNode[i] = Math.random();
+            this.positionNextNode.add(i, Math.random());
         }
         int lenObsTree = (int)(Math.pow(2.0, depthObservationTree+1)-1)*17;
         for (int i=0; i<lenObsTree; i++){

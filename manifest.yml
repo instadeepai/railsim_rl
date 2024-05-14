@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://instadeep.aichor.ai/schema/latest/manifest.schema.json
+
+kind: AIchorManifest
+apiVersion: 0.2.2
+
+builder:
+  image: railsim
+  dockerfile: ./Dockerfile
+  context: .
+
+spec:
+  operator: ray
+  image: melqart
+  command: "python train.py"
+  rayVersion: "v2.2"
+
+  tensorboard: # optional, disabled by default
+    enabled: true
+
+  storage: # optional
+    sharedVolume: # optional
+      mountPoint: "/mnt/shared"
+      sizeGB: 16
+    attachExistingPVCs: # optional, array
+      - name: "my-awesome-pvc"
+        mountPoint: "/mnt/my-60tib-dataset"
+
+  # Ray types are: Head, Job, Workers
+  # They are all required
+  # At least one worker must be set
+  types:
+    Head:
+      ports: [] # optional
+      resources:
+        cpus: 10
+        ramRatio: 2
+
+        # machineName: "dgx" # optional
+        shmSizeGB: 48 # optional
+
+        accelerators: # optional
+          gpu:
+            count: 2
+            product: Tesla-V100-SXM3-32GB
+            type: gpu
+
+    Job:
+      ports: [] # optional
+      resources:
+        cpus: 10
+        ramRatio: 2
+
+        # machineName: "node007" # optional
+        shmSizeGB: 0 # optional
+
+    Workers:
+      - name: "cpu-workers"
+        count: 2
+        ports: [] # optional
+        resources:
+          cpus: 1
+          ramRatio: 2
+          # machineName: "node007" # optional
+          shmSizeGB: 0 # optional
+
