@@ -39,12 +39,14 @@ message ObservationMap {
     map<string, Observation> dictObservation= 1;
 }
 
+message ConfirmationResponse{
+    string ack = 1;
+}
 service RailsimConnecter {
-    // rpc reset (String) returns (ResetOutputMap) {};
 
-    // rpc getAction (StepOutputMap) returns (ActionMap) {};
-    
     rpc getAction (ObservationMap) returns (ActionMap) {};
+
+    rpc updateState (ObservationMap) returns (ConfirmationResponse) {};
 
 }
 

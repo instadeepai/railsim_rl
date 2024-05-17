@@ -37,6 +37,6 @@ docker run -it --name railsim_cuda -v .:/app railsim_cuda
 pip install grpcio-tools
 
 ## protoc commaand to compile the proto file and generate the python classes
-python -m grpc_tools.protoc --proto_path=proto --python_out=RL/python_proto_out --grpc_python_out=RL/python_proto_out railsim.proto --pyi_out=RL/python_proto_out
+python -m grpc_tools.protoc --proto_path=DummyEnv/src/main/proto --python_out=RL/env_wrapper2 --grpc_python_out=RL/env_wrapper2 railsim.proto --pyi_out=RL/env_wrapper2
 
 

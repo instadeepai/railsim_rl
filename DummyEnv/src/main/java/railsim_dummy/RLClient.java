@@ -16,8 +16,11 @@ public class RLClient {
         blockingStub = RailsimConnecterGrpc.newBlockingStub(channel);
     }
 
-    public Map<String, Integer> getAction(Map<String, Observation> obMap){
-        // railsim_dummy.proto.ObservationMap ob_message =  railsim_dummy.proto.ObservationMap.newBuilder().addRepeatedField("train1", obMap.get("train1"));
+    private ObservationMap convertObsToObsProto(Map<String, railsim_dummy.Observation> obMap){
+        /*
+        Converts the Map<String, Observation> into the ObservationMap type
+         */
+
         ObservationMap.Builder observationMapBuilder = ObservationMap.newBuilder();
 
         for (Map.Entry<String, railsim_dummy.Observation> entry: obMap.entrySet()){
@@ -39,6 +42,12 @@ public class RLClient {
         // Build the protoObservationMap that will be sent to the python server as a request
         ObservationMap protoObservationMap = observationMapBuilder.build();
 
+        return protoObservationMap;
+    }
+    public Map<String, Integer> getAction(Map<String, Observation> obMap){
+        // railsim_dummy.proto.ObservationMap ob_message =  railsim_dummy.proto.ObservationMap.newBuilder().addRepeatedField("train1", obMap.get("train1"));
+
+        ObservationMap protoObservationMap = convertObsToObsProto(obMap);
         ActionMap actionMap;
 
         try {
@@ -53,9 +62,23 @@ public class RLClient {
         return actionMap.getDictActionMap();
     }
 
-    public static void  main(String args[]) throws InterruptedException {
+    public String sendObservation(Map<String, Observation> obMap){
 
-        String user = "world";
+        ConfirmationResponse msg;
+        ObservationMap protoObservationMap = convertObsToObsProto(obMap);
+        try {
+            // Call the original method on the server.
+            msg = blockingStub.updateState(protoObservationMap);
+        } catch (StatusRuntimeException e) {
+            // Log a warning if the RPC fails.
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+            return null;
+        }
+
+        return msg.getAck();
+    }
+
+    public static void  main(String args[]) throws InterruptedException {
         // Access a service running on the local machine on port 50051
         String target = "localhost:50051";
 
