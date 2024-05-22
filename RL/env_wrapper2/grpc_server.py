@@ -24,7 +24,7 @@ class GrpcServer(RailsimConnecterServicer):
         print("getAction Call received")
         # print(request)
 
-        action_map = railsim_pb2.ActionMap()
+        # action_map = railsim_pb2.ActionMap()
         temp_action_map = {}
 
         # push the observation to the obs queue
@@ -35,8 +35,7 @@ class GrpcServer(RailsimConnecterServicer):
         print("getAction() -> got the action")
 
         # Process the request and convert to a python object
-        for key, action in action_map.items():
-            temp_action_map.dictAction[key] = action
+        action_map = railsim_pb2.ActionMap(dictAction=temp_action_map)
         return action_map
 
     # Called by Railsim using GRPC

@@ -70,7 +70,7 @@ public class Env2 {
 
             System.out.println("Calling RLClient. Get action for state: " + i);
             Map<String, Integer> actionMap = rlClient.getAction(obMap);
-            System.out.println(actionMap);
+            System.out.println("Action Map: " + actionMap);
 
             System.out.println("Calling RLClient. Send back the observation for state: "+(i+1));
             String response = rlClient.sendObservation(obMap);

@@ -141,7 +141,7 @@ class Railsim2:
         pass
 
 
-def simulation_loop(railsim_env):
+def _simulation_loop(railsim_env):
     print("Simulation loop")
     ob, info = railsim_env.reset()
     for i in range(10):
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     )
 
     process_sim_loop: mp.Process = mp.Process(
-        target=simulation_loop, args=(railsim_env,)
+        target=_simulation_loop, args=(railsim_env,)
     )
 
     process_server.start()
