@@ -18,48 +18,39 @@ public class Env2 {
     int depthObservationTree;
     boolean random;
     List<String> agentIds = new ArrayList<>();
-    public Env2(int numAgents, int depthObservationTree, boolean random){
+    ManagedChannel channel;
+    public Env2(int numAgents, int depthObservationTree, boolean random, int port){
         this.depthObservationTree=depthObservationTree;
         this.random = random;
         this.numAgents = numAgents;
-        if (random){
-            for (Integer i=0; i<numAgents; i++){
-                agentIds.add(i.toString());
-            }
-        }
+        agentIds.add("train0");
+
+        System.out.println("Env2() -> Created new environment with id: "+port);
+        String target = "localhost:"+port;
+
+        channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
+                .build();
+        rlClient = new RLClient(channel);
     }
     // reset() function needs to be called by Python
     public void reset() throws InterruptedException {
-        System.out.println("START the simulation");
+        System.out.println("reset() -> START the simulation");
 
-        String target = "localhost:50051";
-
-        ManagedChannel channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
-                .build();
-
-        try {
-            rlClient = new RLClient(channel);
-
-            // send the initial observation
-            System.out.println("Send the initial observation");
-            Map<String, Observation> obMap = new HashMap<>();
-            for (String aid: this.agentIds){
-                railsim_dummy.Observation ob = new railsim_dummy.Observation(this.depthObservationTree, this.random);
-                obMap.put(aid, ob);
-            }
-            rlClient.sendObservation(obMap);
-
-            // start the simulation loop
-            System.out.println("Start the simulation loop");
-            this.stepEnv(10);
-
-        } finally {
-            channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+        System.out.println("Send the initial observation");
+        Map<String, Observation> obMap = new HashMap<>();
+        for (String aid: this.agentIds){
+            railsim_dummy.Observation ob = new railsim_dummy.Observation(this.depthObservationTree, this.random);
+            obMap.put(aid, ob);
         }
+        rlClient.sendObservation(obMap);
+
+        // start the simulation loop
+        System.out.println("Start the simulation loop");
+        this.stepEnv(10);
     }
     public void stepEnv(int num_steps){
 
-        for(int i = 0; i< num_steps; i ++){
+        for(int i = 0; i< 100000000; i ++){
             System.out.println("Step: "+i);
 
             Map<String, Observation> obMap = null;
@@ -77,31 +68,12 @@ public class Env2 {
         }
 
     }
+
+    public void close() throws InterruptedException {
+        channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+    }
     public List<String> getAgents(){
         return this.agentIds;
-    }
-//    public static void main(String args[]) throws InterruptedException {
-//        String target = "localhost:50051";
-//
-//        ManagedChannel channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
-//                .build();
-//
-//        try {
-//            rlClient = new RLClient(channel);
-//            Env2 env = new Env2();
-//            env.stepEnv(10);
-//
-//        } finally {
-//            // ManagedChannels use resources like threads and TCP connections. To prevent leaking these
-//            // resources the channel should be shut down when it will no longer be used. If it may be used
-//            // again leave it running.
-//            channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
-//        }
-//    }
-
-    public static void main(String args[]) throws InterruptedException {
-        Env2 env = new Env2(2, 2, true);
-        env.reset();
     }
 
 }

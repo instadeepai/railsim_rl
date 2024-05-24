@@ -1,13 +1,12 @@
-import time
 import numpy as np
 from concurrent import futures
-from railsim_pb2_grpc import (
+from grpc_comm.railsim_pb2_grpc import (
     add_RailsimConnecterServicer_to_server,
     RailsimConnecterServicer,
 )
-import railsim_pb2
+from grpc_comm import railsim_pb2
 import grpc
-from my_queue import MyQueue as Queue
+from env_wrapper2.my_queue import MyQueue as Queue
 
 
 class GrpcServer(RailsimConnecterServicer):
@@ -27,8 +26,6 @@ class GrpcServer(RailsimConnecterServicer):
         # action_map = railsim_pb2.ActionMap()
         temp_action_map = {}
 
-        # push the observation to the obs queue
-
         #  waiting for the action
         print("getAction() -> waiting for action $$")
         temp_action_map = self.action_q.get()
@@ -41,7 +38,7 @@ class GrpcServer(RailsimConnecterServicer):
     # Called by Railsim using GRPC
     def updateState(self, request, context):
         # update the next_state_dict variable
-        print("updateState Call received")
+        print("updateState() Call received")
         next_state_dict = {}
         for key, observation in request.dictObservation.items():
             obs_tree = list(observation.obsTree)
@@ -60,12 +57,12 @@ class GrpcServer(RailsimConnecterServicer):
         return railsim_pb2.ConfirmationResponse(ack="OK")
 
 
-def serve(grpc_server: GrpcServer):
+def serve(grpc_server: GrpcServer, free_port: int) -> None:
 
     print("Starting the grpc server")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=3))
     add_RailsimConnecterServicer_to_server(grpc_server, server)
-    server.add_insecure_port("[::]:50051")
+    server.add_insecure_port(f"[::]:{free_port}")
     server.start()
     server.wait_for_termination()
 

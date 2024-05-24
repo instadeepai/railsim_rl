@@ -1,17 +1,18 @@
 import math
 from typing import Any, Optional
 import multiprocessing as mp
-from my_queue import MyQueue as Queue
+from grpc_comm.railsim_factory_client import reset_env
+from env_wrapper2.my_queue import MyQueue as Queue
 import numpy as np
 from gymnasium.spaces import Box, Discrete
-from grpc_server import GrpcServer, serve
+from grpc_comm.grpc_server import GrpcServer, serve
 
 
 class Railsim2:
 
     def __init__(
         self,
-        jar_path: str,
+        port: int,
         num_agents: int,
         depth_obs_tree: int,
         next_state_queue: Queue,
@@ -33,20 +34,12 @@ class Railsim2:
         1: Change direction
         2: Stop
         """
-        print("railsim() -> id next_state_queue: ", id(next_state_queue))
+        self.port = port
+        print("Railsim2() -> id next_state_queue: ", id(next_state_queue))
         self.depth_obs_tree: int = depth_obs_tree
         self.num_agents = num_agents
 
-        # TODO: Fix this
-
-        # Create environment
-        # from railsim_dummy import Env2
-
-        # random = True
-        # self.env = Env2(num_agents, self.depth_obs_tree, random)
-        # self.agent_ids = list(self.env.getAgents())
-        # self.agent_ids = [str(ele) for ele in self.agent_ids]
-
+        # TODO: Get AgentIDs in the reset call
         self.agent_ids = ["train0"]
         obs_space_single_agent = Box(
             shape=(17 * int(math.pow(2, self.depth_obs_tree + 1) - 1) + 4 + 2,),
@@ -81,7 +74,10 @@ class Railsim2:
         """
         multi_agent_info: dict = {}
 
-        # TODO: Start the simualtion loop automatically
+        print("reset() -> reset the railsim environment")
+        reset_env(self.port)
+        # Request Environment factory server to instantiate railsim environment
+        # This environment would talk to client on free_port
         print("reset() -> wait to get next state from queue")
         multi_agent_obs = self.next_state_queue.get()
         print("reset() -> Got the next state")
@@ -120,6 +116,11 @@ class Railsim2:
         print("step() -> waiting for next state")
         multi_agent_obs = self.next_state_queue.get()
         print("step() -> got the next state")
+
+        for aid in self.agent_ids:
+            multi_agent_rewards[aid] = self._calc_reward()
+            multi_agent_terminated[aid] = False
+            multi_agent_truncated[aid] = False
 
         return (
             multi_agent_obs,

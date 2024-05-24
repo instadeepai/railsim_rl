@@ -1,6 +1,7 @@
 # import os
-
 # import ray
+import socketserver
+import time
 from env_wrapper.railsim import Railsim
 from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
@@ -12,16 +13,21 @@ from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 # from ray.rllib.models import ModelCatalog
 # from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import get_trainable_cls, register_env
-
 from experiment_script import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
 )
+import multiprocessing as mp
+from env_wrapper2.my_queue import MyQueue as Queue
+from grpc_comm.grpc_server import GrpcServer, serve
+from env_wrapper2.railsim2 import Railsim2
+from grpc_comm.railsim_factory_client import request_environment
+# from my_queue import MyQueue as Queues
 
 
 def env_creator(args):
     env = ParallelPettingZooEnv(
-        Railsim(
+        Railsim(           
             jar_path="DummyEnv/target/DummyEnv-1.0-SNAPSHOT.jar",
             num_agents=3,
             depth_obs_tree=2,
@@ -31,53 +37,44 @@ def env_creator(args):
     return env
 
 
-# if __name__ == "__main__":
-#     ray.init()
+def create_env2(args):
+    next_state_queue: Queue = Queue()
+    action_queue: Queue = Queue()
+    print("orig() -> id next_state_queue: ", id(next_state_queue))
 
-#     env_name = "railsim"
+    with socketserver.TCPServer(("localhost", 0), None) as s:
+        free_port = s.server_address[1]
 
-#     register_env(env_name, lambda config: env_creator(config))
+    grpc_server = GrpcServer(
+        action_queue=action_queue, next_state_queue=next_state_queue
+    )
+    print(f"RL listening on port {free_port}")
+    process_server: mp.Process = mp.Process(
+        target=serve,
+        args=(
+            grpc_server,
+            free_port,
+        ),
+    )
+    process_server.start()
 
-#     config = (
-#         PPOConfig()
-#         .environment(env=env_name, clip_actions=True)
-#         .rollouts(num_rollout_workers=0, rollout_fragment_length=128)
-#         .training(
-#             train_batch_size=512,
-#             lr=2e-5,
-#             gamma=0.99,
-#             lambda_=0.9,
-#             use_gae=True,
-#             clip_param=0.4,
-#             grad_clip=None,
-#             entropy_coeff=0.1,
-#             vf_loss_coeff=0.25,
-#             sgd_minibatch_size=64,
-#             num_sgd_iter=10,
-#         )
-#         .debugging(log_level="ERROR")
-#         .framework(framework="torch")
-#         .resources(num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
-#         .multi_agent(
-#             policies={"p0"},
-#             # All agents map to the exact same policy.
-#             policy_mapping_fn=(lambda aid, *args, **kwargs: "p0"),
-#         )
-#         .rl_module(
-#             rl_module_spec=MultiAgentRLModuleSpec(
-#                 module_specs={"p0": SingleAgentRLModuleSpec()},
-#             ),
-#         )
-#     )
+    # Instantiate a new java environment
+    request_environment(free_port=free_port)
 
-#     tune.run(
-#         "PPO",
-#         name="PPO",
-#         stop={"timesteps_total": 5000000 if not os.environ.get("CI") else 50000},
-#         checkpoint_freq=2,
-#         local_dir="~/Documents/ray_results/" + env_name,
-#         config=config.to_dict(),
-#     )
+    wait_time = 10
+    print(f"Waiting for the server to start for {wait_time} seconds before the environment simulation")
+    time.sleep(wait_time)
+
+    # Create the railsim env wrapper 
+    railsim_env = Railsim2(
+        port=free_port,
+        num_agents=2,
+        depth_obs_tree=2,
+        next_state_queue=next_state_queue,
+        action_queue=action_queue,
+    )
+    
+    return ParallelPettingZooEnv(railsim_env)
 
 
 parser = add_rllib_example_script_args(
@@ -93,12 +90,13 @@ if __name__ == "__main__":
         args.enable_new_api_stack
     ), "Must set --enable-new-api-stack when running this script!"
 
-    register_env("env", lambda config: env_creator(config))
+    # register_env("env", lambda config: env_creator(config))
+    register_env("env", lambda config: create_env2(config))
 
     base_config = (
         get_trainable_cls(args.algo)
         .get_default_config()
-        .environment("env")
+        .environment("env", disable_env_checking=True)
         .multi_agent(
             policies={"p0"},
             # All agents map to the exact same policy.
@@ -109,6 +107,7 @@ if __name__ == "__main__":
                 "vf_share_layers": True,
             },
             vf_loss_coeff=0.005,
+            train_batch_size=512,
         )
         .rl_module(
             rl_module_spec=MultiAgentRLModuleSpec(
@@ -118,3 +117,4 @@ if __name__ == "__main__":
     )
 
     run_rllib_example_script_experiment(base_config, args)
+    # request_environment(50053)

@@ -9,7 +9,7 @@ message Observation {
     repeated double trainState = 2;
     repeated double positionNextNode = 3;
 }
-
+/*
 message StepOutput {
     Observation observation = 1;
     double reward = 2;
@@ -30,7 +30,7 @@ message StepOutputMap {
 message ResetOutputMap {
     map<string, ResetOutput> dictResetOutput= 1;
 }
-
+*/
 message ActionMap{
     map<string, int32> dictAction = 1;
 }
@@ -42,11 +42,22 @@ message ObservationMap {
 message ConfirmationResponse{
     string ack = 1;
 }
+
 service RailsimConnecter {
 
     rpc getAction (ObservationMap) returns (ActionMap) {};
 
     rpc updateState (ObservationMap) returns (ConfirmationResponse) {};
 
+}
+
+message GrpcPort{
+    int32 grpcPort = 1;
+}
+
+service RailsimFactory{
+    rpc getEnvironment (GrpcPort)  returns (ConfirmationResponse) {};
+
+    rpc resetEnv (GrpcPort) returns (ConfirmationResponse) {};
 }
 

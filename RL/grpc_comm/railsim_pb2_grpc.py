@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import railsim_pb2 as railsim__pb2
+from grpc_comm import railsim_pb2 as railsim__pb2
 
 
 class RailsimConnecterStub(object):
@@ -94,6 +94,100 @@ class RailsimConnecter(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/RailsimConnecter/updateState',
             railsim__pb2.ObservationMap.SerializeToString,
+            railsim__pb2.ConfirmationResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class RailsimFactoryStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.getEnvironment = channel.unary_unary(
+                '/RailsimFactory/getEnvironment',
+                request_serializer=railsim__pb2.GrpcPort.SerializeToString,
+                response_deserializer=railsim__pb2.ConfirmationResponse.FromString,
+                )
+        self.resetEnv = channel.unary_unary(
+                '/RailsimFactory/resetEnv',
+                request_serializer=railsim__pb2.GrpcPort.SerializeToString,
+                response_deserializer=railsim__pb2.ConfirmationResponse.FromString,
+                )
+
+
+class RailsimFactoryServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def getEnvironment(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def resetEnv(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_RailsimFactoryServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'getEnvironment': grpc.unary_unary_rpc_method_handler(
+                    servicer.getEnvironment,
+                    request_deserializer=railsim__pb2.GrpcPort.FromString,
+                    response_serializer=railsim__pb2.ConfirmationResponse.SerializeToString,
+            ),
+            'resetEnv': grpc.unary_unary_rpc_method_handler(
+                    servicer.resetEnv,
+                    request_deserializer=railsim__pb2.GrpcPort.FromString,
+                    response_serializer=railsim__pb2.ConfirmationResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'RailsimFactory', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class RailsimFactory(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def getEnvironment(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/RailsimFactory/getEnvironment',
+            railsim__pb2.GrpcPort.SerializeToString,
+            railsim__pb2.ConfirmationResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def resetEnv(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/RailsimFactory/resetEnv',
+            railsim__pb2.GrpcPort.SerializeToString,
             railsim__pb2.ConfirmationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--num-agents=2", "--enable-new-api-stack", "--num-env-runners=0", "--no-tune"],
+            "args": ["--num-agents=1", "--enable-new-api-stack", "--num-env-runners=0", "--no-tune"],
             "justMyCode": false
         },
         {
