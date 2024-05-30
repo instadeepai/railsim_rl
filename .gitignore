@@ -7,5 +7,7 @@ RL/.DS_Store
 DummyEnv/.gitignore
 sbbvenv
 .vscode
+.vscode/
 .mypy_cache
 RL/__pycache__
+trial.ipynb

@@ -4,19 +4,19 @@ from grpc_comm.railsim_pb2_grpc import (
     add_RailsimConnecterServicer_to_server,
     RailsimConnecterServicer,
 )
-from grpc_comm import railsim_pb2
+from grpc_comm import StepOutput, railsim_pb2
 import grpc
-from env_wrapper2.my_queue import MyQueue as Queue
+from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
 
 
 class GrpcServer(RailsimConnecterServicer):
 
-    def __init__(self, action_queue: Queue, next_state_queue: Queue) -> None:
+    def __init__(self, action_queue: Queue, step_output_queue: Queue) -> None:
         super().__init__()
-        print("GrpcServer() -> id next_state_queue: ", id(next_state_queue))
+        print("GrpcServer() -> id step_output_queue: ", id(step_output_queue))
 
         self.action_q = action_queue
-        self.next_state_q = next_state_queue
+        self.step_output_q = step_output_queue
 
     # Called by Railsim using GRPC
     def getAction(self, request, context):
@@ -37,23 +37,44 @@ class GrpcServer(RailsimConnecterServicer):
 
     # Called by Railsim using GRPC
     def updateState(self, request, context):
-        # update the next_state_dict variable
         print("updateState() Call received")
-        next_state_dict = {}
-        for key, observation in request.dictObservation.items():
-            obs_tree = list(observation.obsTree)
-            train_state = list(observation.trainState)
-            position_next_node = list(observation.positionNextNode)
-            next_state_dict[key] = np.concatenate(
-                (
-                    np.array(obs_tree, dtype=np.float32),
-                    np.array(train_state, dtype=np.float32),
-                    np.array(position_next_node, dtype=np.float32),
-                )
-            )
-        self.next_state_q.put(next_state_dict)
 
-        # print(f"updateState() -> size of next_state_q after inserting data: {self.next_state_q.qsize()}")
+        # extract the StepOutput from request
+        terminated_d = {}
+        truncated_d = {}
+        observation_d = {}
+        reward_d = {}
+        info_d = {}
+
+        for aid, step_output in request.dictStepOutput.items():
+            terminated_d[aid] = step_output.terminated
+            truncated_d[aid] = step_output.truncated
+
+            # observation = step_output.observation
+            # obs_tree = list(observation.obsTree)
+            # train_state = list(observation.trainState)
+            # position_next_node = list(observation.positionNextNode)
+            # observation_d[aid] = np.concatenate(
+            #     (
+            #         np.array(obs_tree, dtype=np.float32),
+            #         np.array(train_state, dtype=np.float32),
+            #         np.array(position_next_node, dtype=np.float32),
+            #     )
+            # )
+            observation_d[aid] = step_output.observation
+            reward_d[aid] = step_output.reward
+
+        processed_step_output = StepOutput(
+            observation_d=observation_d,
+            reward_d=reward_d,
+            terminated_d=terminated_d,
+            truncated_d=truncated_d,
+            info_d=info_d,
+        )
+
+        # Push the step_output in the queye
+        self.step_output_q.put(processed_step_output)
+
         return railsim_pb2.ConfirmationResponse(ack="OK")
 
 
@@ -68,10 +89,10 @@ def serve(grpc_server: GrpcServer, free_port: int) -> None:
 
 
 if __name__ == "__main__":
-    next_state_queue: Queue = Queue()
+    step_output_queue: Queue = Queue()
     action_queue: Queue = Queue()
-    print(id(next_state_queue))
+    print(id(step_output_queue))
     grpc_server = GrpcServer(
-        action_queue=action_queue, next_state_queue=next_state_queue
+        action_queue=action_queue, step_output_queue=step_output_queue
     )
     serve(grpc_server)

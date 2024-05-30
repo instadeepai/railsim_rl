@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from grpc_comm import railsim_pb2 as railsim__pb2
 
 
@@ -16,13 +17,13 @@ class RailsimConnecterStub(object):
         """
         self.getAction = channel.unary_unary(
                 '/RailsimConnecter/getAction',
-                request_serializer=railsim__pb2.ObservationMap.SerializeToString,
-                response_deserializer=railsim__pb2.ActionMap.FromString,
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=railsim__pb2.ProtoActionMap.FromString,
                 )
         self.updateState = channel.unary_unary(
                 '/RailsimConnecter/updateState',
-                request_serializer=railsim__pb2.ObservationMap.SerializeToString,
-                response_deserializer=railsim__pb2.ConfirmationResponse.FromString,
+                request_serializer=railsim__pb2.ProtoStepOutputMap.SerializeToString,
+                response_deserializer=railsim__pb2.ProtoConfirmationResponse.FromString,
                 )
 
 
@@ -46,13 +47,13 @@ def add_RailsimConnecterServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'getAction': grpc.unary_unary_rpc_method_handler(
                     servicer.getAction,
-                    request_deserializer=railsim__pb2.ObservationMap.FromString,
-                    response_serializer=railsim__pb2.ActionMap.SerializeToString,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=railsim__pb2.ProtoActionMap.SerializeToString,
             ),
             'updateState': grpc.unary_unary_rpc_method_handler(
                     servicer.updateState,
-                    request_deserializer=railsim__pb2.ObservationMap.FromString,
-                    response_serializer=railsim__pb2.ConfirmationResponse.SerializeToString,
+                    request_deserializer=railsim__pb2.ProtoStepOutputMap.FromString,
+                    response_serializer=railsim__pb2.ProtoConfirmationResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -76,8 +77,8 @@ class RailsimConnecter(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/RailsimConnecter/getAction',
-            railsim__pb2.ObservationMap.SerializeToString,
-            railsim__pb2.ActionMap.FromString,
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            railsim__pb2.ProtoActionMap.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -93,8 +94,8 @@ class RailsimConnecter(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/RailsimConnecter/updateState',
-            railsim__pb2.ObservationMap.SerializeToString,
-            railsim__pb2.ConfirmationResponse.FromString,
+            railsim__pb2.ProtoStepOutputMap.SerializeToString,
+            railsim__pb2.ProtoConfirmationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -110,13 +111,13 @@ class RailsimFactoryStub(object):
         """
         self.getEnvironment = channel.unary_unary(
                 '/RailsimFactory/getEnvironment',
-                request_serializer=railsim__pb2.GrpcPort.SerializeToString,
-                response_deserializer=railsim__pb2.ConfirmationResponse.FromString,
+                request_serializer=railsim__pb2.ProtoGrpcPort.SerializeToString,
+                response_deserializer=railsim__pb2.ProtoConfirmationResponse.FromString,
                 )
         self.resetEnv = channel.unary_unary(
                 '/RailsimFactory/resetEnv',
-                request_serializer=railsim__pb2.GrpcPort.SerializeToString,
-                response_deserializer=railsim__pb2.ConfirmationResponse.FromString,
+                request_serializer=railsim__pb2.ProtoGrpcPort.SerializeToString,
+                response_deserializer=railsim__pb2.ProtoAgentIDs.FromString,
                 )
 
 
@@ -140,13 +141,13 @@ def add_RailsimFactoryServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'getEnvironment': grpc.unary_unary_rpc_method_handler(
                     servicer.getEnvironment,
-                    request_deserializer=railsim__pb2.GrpcPort.FromString,
-                    response_serializer=railsim__pb2.ConfirmationResponse.SerializeToString,
+                    request_deserializer=railsim__pb2.ProtoGrpcPort.FromString,
+                    response_serializer=railsim__pb2.ProtoConfirmationResponse.SerializeToString,
             ),
             'resetEnv': grpc.unary_unary_rpc_method_handler(
                     servicer.resetEnv,
-                    request_deserializer=railsim__pb2.GrpcPort.FromString,
-                    response_serializer=railsim__pb2.ConfirmationResponse.SerializeToString,
+                    request_deserializer=railsim__pb2.ProtoGrpcPort.FromString,
+                    response_serializer=railsim__pb2.ProtoAgentIDs.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -170,8 +171,8 @@ class RailsimFactory(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/RailsimFactory/getEnvironment',
-            railsim__pb2.GrpcPort.SerializeToString,
-            railsim__pb2.ConfirmationResponse.FromString,
+            railsim__pb2.ProtoGrpcPort.SerializeToString,
+            railsim__pb2.ProtoConfirmationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -187,7 +188,7 @@ class RailsimFactory(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/RailsimFactory/resetEnv',
-            railsim__pb2.GrpcPort.SerializeToString,
-            railsim__pb2.ConfirmationResponse.FromString,
+            railsim__pb2.ProtoGrpcPort.SerializeToString,
+            railsim__pb2.ProtoAgentIDs.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

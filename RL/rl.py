@@ -25,16 +25,16 @@ from grpc_comm.railsim_factory_client import request_environment
 # from my_queue import MyQueue as Queues
 
 
-def env_creator(args):
-    env = ParallelPettingZooEnv(
-        Railsim(           
-            jar_path="DummyEnv/target/DummyEnv-1.0-SNAPSHOT.jar",
-            num_agents=3,
-            depth_obs_tree=2,
-        )
-    )
+# def env_creator(args):
+#     env = ParallelPettingZooEnv(
+#         Railsim(           
+#             jar_path="DummyEnv/target/DummyEnv-1.0-SNAPSHOT.jar",
+#             num_agents=3,
+#             depth_obs_tree=2,
+#         )
+#     )
 
-    return env
+#     return env
 
 
 def create_env2(args):
