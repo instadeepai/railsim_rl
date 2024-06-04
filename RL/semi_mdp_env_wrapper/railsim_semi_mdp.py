@@ -8,6 +8,7 @@ from gymnasium.spaces import Box, Discrete
 from grpc_comm.grpc_server import GrpcServer, serve
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from grpc_comm import StepOutput
+import gymnasium as gym
 
 
 class RailsimSemiMdp(MultiAgentEnv):
@@ -15,7 +16,6 @@ class RailsimSemiMdp(MultiAgentEnv):
     def __init__(
         self,
         port: int,
-        agent_ids: list,
         depth_obs_tree: int,
         step_output_queue: Queue,
         action_queue: Queue,
@@ -26,29 +26,19 @@ class RailsimSemiMdp(MultiAgentEnv):
 
         self.port = port
         print("RailsimSemiMdp() -> id step_output_queue: ", id(step_output_queue))
-        self.depth_obs_tree: int = depth_obs_tree
-        self.num_agents = len(agent_ids)
-        self.agent_ids = agent_ids
-
-        obs_space_single_agent = Box(
-            shape=(
-                observation_tree_node_size
-                * int((math.pow(2, self.depth_obs_tree + 1) - 1) / 1)
-                + train_state_size
-                + query_node_position_size,
-            ),
-            low=-math.inf,
-            high=math.inf,
-            dtype=np.float32,
-        )
-        self.observation_space = {aid: obs_space_single_agent for aid in self.agent_ids}
-        self.action_space = {aid: Discrete(3) for aid in self.agent_ids}
-
+        self.depth_obs_tree = depth_obs_tree
         self.step_output_queue = step_output_queue
         self.action_queue = action_queue
 
+        self.train_state_size = train_state_size
+        self.query_node_position_size = query_node_position_size
+        self.observation_tree_node_size = observation_tree_node_size
+
         # A list to track all terminated agents
         self.terminated_agents = []
+
+        # reset the environment
+        self.reset()
 
     def observation_space_sample(self, agent_ids: list = None):
         sample = self.observation_space.sample()
@@ -101,7 +91,26 @@ class RailsimSemiMdp(MultiAgentEnv):
         print("reset() -> reset the railsim environment")
 
         # send reset signal to railsim
-        reset_env(self.port)
+        agent_ids: list = reset_env(self.port)
+        self.agent_ids = agent_ids
+        self.num_agents = len(self.agent_ids)
+
+        # define the observation space and action space based on the agent list
+        obs_space_single_agent = Box(
+            shape=(
+                self.observation_tree_node_size
+                * int((math.pow(2, self.depth_obs_tree + 1) - 1) / 1)
+                + self.train_state_size
+                + self.query_node_position_size,
+            ),
+            low=-math.inf,
+            high=math.inf,
+            dtype=np.float32,
+        )
+        self.observation_space = gym.spaces.Dict(
+            {aid: obs_space_single_agent for aid in self.agent_ids})
+        self.action_space = gym.spaces.Dict(
+            {aid: Discrete(3) for aid in self.agent_ids})
 
         print("reset() -> wait to get next state from queue")
         step_out: StepOutput = self.step_output_queue.get()

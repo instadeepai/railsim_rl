@@ -2,7 +2,6 @@
 # import ray
 import socketserver
 import time
-from env_wrapper.railsim import Railsim
 from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
 
@@ -18,9 +17,9 @@ from experiment_script import (
     run_rllib_example_script_experiment,
 )
 import multiprocessing as mp
-from env_wrapper2.my_queue import MyQueue as Queue
+from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
+from semi_mdp_env_wrapper.railsim_semi_mdp import RailsimSemiMdp
 from grpc_comm.grpc_server import GrpcServer, serve
-from env_wrapper2.railsim2 import Railsim2
 from grpc_comm.railsim_factory_client import request_environment
 # from my_queue import MyQueue as Queues
 
@@ -37,16 +36,16 @@ from grpc_comm.railsim_factory_client import request_environment
 #     return env
 
 
-def create_env2(args):
-    next_state_queue: Queue = Queue()
+def create_env(args):
+    step_output_queue: Queue = Queue()
     action_queue: Queue = Queue()
-    print("orig() -> id next_state_queue: ", id(next_state_queue))
+    print("orig() -> id step_output_queue: ", id(step_output_queue))
 
     with socketserver.TCPServer(("localhost", 0), None) as s:
         free_port = s.server_address[1]
 
     grpc_server = GrpcServer(
-        action_queue=action_queue, next_state_queue=next_state_queue
+        action_queue=action_queue, step_output_queue=step_output_queue
     )
     print(f"RL listening on port {free_port}")
     process_server: mp.Process = mp.Process(
@@ -65,16 +64,15 @@ def create_env2(args):
     print(f"Waiting for the server to start for {wait_time} seconds before the environment simulation")
     time.sleep(wait_time)
 
-    # Create the railsim env wrapper 
-    railsim_env = Railsim2(
+    # Create the railsim env wrapper -> reset() is also called at this point
+    railsim_env = RailsimSemiMdp(
         port=free_port,
-        num_agents=2,
         depth_obs_tree=2,
-        next_state_queue=next_state_queue,
+        step_output_queue=step_output_queue,
         action_queue=action_queue,
     )
     
-    return ParallelPettingZooEnv(railsim_env)
+    return railsim_env
 
 
 parser = add_rllib_example_script_args(
@@ -91,7 +89,7 @@ if __name__ == "__main__":
     ), "Must set --enable-new-api-stack when running this script!"
 
     # register_env("env", lambda config: env_creator(config))
-    register_env("env", lambda config: create_env2(config))
+    register_env("env", lambda config: create_env(config))
 
     base_config = (
         get_trainable_cls(args.algo)
