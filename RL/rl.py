@@ -4,7 +4,7 @@ import socketserver
 import time
 from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
-
+import logging
 # from ray import tune
 # from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
@@ -24,22 +24,11 @@ from grpc_comm.railsim_factory_client import request_environment
 # from my_queue import MyQueue as Queues
 
 
-# def env_creator(args):
-#     env = ParallelPettingZooEnv(
-#         Railsim(           
-#             jar_path="DummyEnv/target/DummyEnv-1.0-SNAPSHOT.jar",
-#             num_agents=3,
-#             depth_obs_tree=2,
-#         )
-#     )
-
-#     return env
-
-
 def create_env(args):
+    logger = logging.getLogger(__name__)
     step_output_queue: Queue = Queue()
     action_queue: Queue = Queue()
-    print("orig() -> id step_output_queue: ", id(step_output_queue))
+    logger.debug(f"orig() -> id step_output_queue: {id(step_output_queue)}")
 
     with socketserver.TCPServer(("localhost", 0), None) as s:
         free_port = s.server_address[1]
@@ -47,7 +36,7 @@ def create_env(args):
     grpc_server = GrpcServer(
         action_queue=action_queue, step_output_queue=step_output_queue
     )
-    print(f"RL listening on port {free_port}")
+    logger.debug(f"RL listening on port {free_port}")
     process_server: mp.Process = mp.Process(
         target=serve,
         args=(
@@ -61,7 +50,7 @@ def create_env(args):
     request_environment(free_port=free_port)
 
     wait_time = 10
-    print(f"Waiting for the server to start for {wait_time} seconds before the environment simulation")
+    logger.debug(f"Waiting for the server to start for {wait_time} seconds before the environment simulation")
     time.sleep(wait_time)
 
     # Create the railsim env wrapper -> reset() is also called at this point
@@ -88,13 +77,14 @@ if __name__ == "__main__":
         args.enable_new_api_stack
     ), "Must set --enable-new-api-stack when running this script!"
 
-    # register_env("env", lambda config: env_creator(config))
+    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+
     register_env("env", lambda config: create_env(config))
 
     base_config = (
         get_trainable_cls(args.algo)
         .get_default_config()
-        .environment("env", disable_env_checking=True)
+        .environment("env")
         .multi_agent(
             policies={"p0"},
             # All agents map to the exact same policy.
@@ -115,4 +105,3 @@ if __name__ == "__main__":
     )
 
     run_rllib_example_script_experiment(base_config, args)
-    # request_environment(50053)

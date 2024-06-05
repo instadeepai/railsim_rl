@@ -9,7 +9,7 @@ from grpc_comm.grpc_server import GrpcServer, serve
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from grpc_comm import StepOutput
 import gymnasium as gym
-
+import logging
 
 class RailsimSemiMdp(MultiAgentEnv):
 
@@ -25,7 +25,8 @@ class RailsimSemiMdp(MultiAgentEnv):
     ) -> None:
 
         self.port = port
-        print("RailsimSemiMdp() -> id step_output_queue: ", id(step_output_queue))
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug(f"RailsimSemiMdp() -> id step_output_queue: {id(step_output_queue)}")
         self.depth_obs_tree = depth_obs_tree
         self.step_output_queue = step_output_queue
         self.action_queue = action_queue
@@ -40,6 +41,8 @@ class RailsimSemiMdp(MultiAgentEnv):
         # reset the environment
         self.reset()
 
+        
+
     def observation_space_sample(self, agent_ids: list = None):
         sample = self.observation_space.sample()
         if agent_ids is None:
@@ -53,9 +56,9 @@ class RailsimSemiMdp(MultiAgentEnv):
         return {aid: sample[aid] for aid in agent_ids}
 
     def _concat_and_pad_observation(self, observation):
-        obs_tree = list(observation.obsTree)
-        train_state = list(observation.trainState)
-        position_next_node = list(observation.positionNextNode)
+        obs_tree = observation["obs_tree"]
+        train_state = observation["train_state"]
+        position_next_node = observation["position_next_node"]
 
         #  pad obs_tree
         ideal_obs_tree_len = self.observation_tree_node_size * (
@@ -64,7 +67,7 @@ class RailsimSemiMdp(MultiAgentEnv):
 
         if len(obs_tree) != ideal_obs_tree_len:
             # pad the observation tree
-            obs_tree = obs_tree + [0] * (ideal_obs_tree_len - len(obs_tree))
+            obs_tree = obs_tree + [0] * int(ideal_obs_tree_len - len(obs_tree))
 
         observation_processed = np.concatenate(
             (
@@ -88,7 +91,7 @@ class RailsimSemiMdp(MultiAgentEnv):
             tuple[dict[str, Any], dict[str, Any]]: Observation and infos corresponding to each agent
         """
         multi_agent_info: dict = {}
-        print("reset() -> reset the railsim environment")
+        self.logger.debug("reset() -> reset the railsim environment")
 
         # send reset signal to railsim
         agent_ids: list = reset_env(self.port)
@@ -112,15 +115,25 @@ class RailsimSemiMdp(MultiAgentEnv):
         self.action_space = gym.spaces.Dict(
             {aid: Discrete(3) for aid in self.agent_ids})
 
-        print("reset() -> wait to get next state from queue")
+        # wait to get next state from queue 
+        self.logger.debug("reset() -> wait to get next state from queue")
         step_out: StepOutput = self.step_output_queue.get()
+
+        # If there are no agents in the system, end the training loop
+        terminated_agents = []
+        for aid, terminated in step_out.terminated_d.items():
+            if terminated:
+                terminated_agents.append(aid)
+
+        if set(terminated_agents)==set(self.agent_ids):
+            raise Exception("There are no active agents in the environment for this scenario")
 
         # extract observation from step_output and pad the observation tree
         obs_d = {}
         for aid, observation in step_out.observation_d.items():
             obs_d[aid] = self._concat_and_pad_observation(observation=observation)
 
-        print("reset() -> Got the next state")
+        self.logger.debug("reset() -> Got the next state")
 
         # reset the terminated_list
         self.terminated_agents = []
@@ -143,14 +156,14 @@ class RailsimSemiMdp(MultiAgentEnv):
             obs, reward, terminated, truncated, info
         """
         # Put the action in the action queue
-        print("step() -> push the action in the queue")
+        self.logger.debug("step() -> push the action in the queue")
         self.action_queue.put(action_dict)
 
         # keep polling the next state queue
-        print("step() -> waiting for next state")
+        self.logger.debug("step() -> waiting for next state")
         step_output: StepOutput = self.step_output_queue.get()
 
-        print("step() -> got the next state")
+        self.logger.debug("step() -> got the next state")
 
         # Update the terminated_agents tracker
         for aid, terminated in step_output.terminated_d.items():

@@ -1,5 +1,6 @@
-ray[rllib]
-gymnasium
-jpype1
-numpy
-torch
+ray[rllib]==2.20
+gymnasium==0.28
+numpy==1.26
+torch==2.3
+grpcio==1.64
+grpcio-tools

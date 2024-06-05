@@ -94,7 +94,7 @@ def add_rllib_example_script_args(
     parser.add_argument(
         "--num-agents",
         type=int,
-        default=0,
+        default=1,
         help="If 0 (default), will run as single-agent. If > 0, will run as "
         "multi-agent with the environment simply cloned n times and each agent acting "
         "independently at every single timestep. The overall reward for this "
