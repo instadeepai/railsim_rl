@@ -7,12 +7,12 @@ ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_C
 COPY conda/environment.yml ./
 RUN conda env update --prune -f environment.yml && \
     conda clean -afy && \
-    find /opt/conda/ -follow -type f -name '*.pyc' -delete 
+    find /opt/conda/ -follow -type f -name '*.pyc' -delete
 
 # https://forums.docker.com/t/error-when-building-image/122710/5
 # Installing gcc as it's required to build JPype1
 RUN apt-get update -q \
-  && apt-get install --no-install-recommends -qy python3-dev g++ gcc 
+  && apt-get install --no-install-recommends -qy python3-dev g++ gcc
 
 
 # https://pythonspeed.com/articles/activate-conda-dockerfile/
@@ -72,4 +72,3 @@ WORKDIR $APP_FOLDER
 
 # USER $USER
 # ADD --chown=$USER:$GROUP . .
-

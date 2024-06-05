@@ -1,27 +1,18 @@
-# import os
-# import ray
+import logging
+import multiprocessing as mp
 import socketserver
 import time
-from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
-from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
-import logging
-# from ray import tune
-# from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
-
-# from ray.rllib.models import ModelCatalog
-# from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-from ray.tune.registry import get_trainable_cls, register_env
 from experiment_script import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
 )
-import multiprocessing as mp
-from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
-from semi_mdp_env_wrapper.railsim_semi_mdp import RailsimSemiMdp
 from grpc_comm.grpc_server import GrpcServer, serve
 from grpc_comm.railsim_factory_client import request_environment
-# from my_queue import MyQueue as Queues
+from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
+from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
+from ray.tune.registry import get_trainable_cls, register_env
+from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
+from semi_mdp_env_wrapper.railsim_semi_mdp import RailsimSemiMdp
 
 
 def create_env(args):
@@ -50,7 +41,9 @@ def create_env(args):
     request_environment(free_port=free_port)
 
     wait_time = 10
-    logger.debug(f"Waiting for the server to start for {wait_time} seconds before the environment simulation")
+    logger.debug(
+        f"Waiting for the server to start for {wait_time} seconds before the environment simulation"
+    )
     time.sleep(wait_time)
 
     # Create the railsim env wrapper -> reset() is also called at this point
@@ -60,7 +53,7 @@ def create_env(args):
         step_output_queue=step_output_queue,
         action_queue=action_queue,
     )
-    
+
     return railsim_env
 
 
@@ -77,7 +70,7 @@ if __name__ == "__main__":
         args.enable_new_api_stack
     ), "Must set --enable-new-api-stack when running this script!"
 
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
 
     register_env("env", lambda config: create_env(config))
 

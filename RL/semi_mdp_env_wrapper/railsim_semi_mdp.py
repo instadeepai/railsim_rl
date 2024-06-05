@@ -1,15 +1,17 @@
-import math
-from typing import Any, Optional
-import multiprocessing as mp
-from grpc_comm.railsim_factory_client import reset_env
-from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
-import numpy as np
-from gymnasium.spaces import Box, Discrete
-from grpc_comm.grpc_server import GrpcServer, serve
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from grpc_comm import StepOutput
-import gymnasium as gym
 import logging
+import math
+import multiprocessing as mp
+from typing import Any, Optional
+
+import gymnasium as gym
+import numpy as np
+from grpc_comm import StepOutput
+from grpc_comm.grpc_server import GrpcServer, serve
+from grpc_comm.railsim_factory_client import reset_env
+from gymnasium.spaces import Box, Discrete
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
+
 
 class RailsimSemiMdp(MultiAgentEnv):
 
@@ -26,7 +28,9 @@ class RailsimSemiMdp(MultiAgentEnv):
 
         self.port = port
         self.logger = logging.getLogger(__name__)
-        self.logger.debug(f"RailsimSemiMdp() -> id step_output_queue: {id(step_output_queue)}")
+        self.logger.debug(
+            f"RailsimSemiMdp() -> id step_output_queue: {id(step_output_queue)}"
+        )
         self.depth_obs_tree = depth_obs_tree
         self.step_output_queue = step_output_queue
         self.action_queue = action_queue
@@ -40,8 +44,6 @@ class RailsimSemiMdp(MultiAgentEnv):
 
         # reset the environment
         self.reset()
-
-        
 
     def observation_space_sample(self, agent_ids: list = None):
         sample = self.observation_space.sample()
@@ -111,11 +113,13 @@ class RailsimSemiMdp(MultiAgentEnv):
             dtype=np.float32,
         )
         self.observation_space = gym.spaces.Dict(
-            {aid: obs_space_single_agent for aid in self.agent_ids})
+            {aid: obs_space_single_agent for aid in self.agent_ids}
+        )
         self.action_space = gym.spaces.Dict(
-            {aid: Discrete(3) for aid in self.agent_ids})
+            {aid: Discrete(3) for aid in self.agent_ids}
+        )
 
-        # wait to get next state from queue 
+        # wait to get next state from queue
         self.logger.debug("reset() -> wait to get next state from queue")
         step_out: StepOutput = self.step_output_queue.get()
 
@@ -125,8 +129,10 @@ class RailsimSemiMdp(MultiAgentEnv):
             if terminated:
                 terminated_agents.append(aid)
 
-        if set(terminated_agents)==set(self.agent_ids):
-            raise Exception("There are no active agents in the environment for this scenario")
+        if set(terminated_agents) == set(self.agent_ids):
+            raise Exception(
+                "There are no active agents in the environment for this scenario"
+            )
 
         # extract observation from step_output and pad the observation tree
         obs_d = {}

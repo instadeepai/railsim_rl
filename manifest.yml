@@ -62,4 +62,3 @@ spec:
           ramRatio: 2
           # machineName: "node007" # optional
           shmSizeGB: 0 # optional
-

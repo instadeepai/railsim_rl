@@ -1,9 +1,13 @@
 from __future__ import print_function
-import grpc
-from grpc_comm import railsim_pb2
-from grpc_comm import railsim_pb2_grpc
+
 import logging
+
+import grpc
+from grpc_comm import railsim_pb2, railsim_pb2_grpc
+
 logger = logging.getLogger(__name__)
+
+
 # Factory Environment server always runs on 50051.
 # free_port is used for communication between the Environment and RL
 # This request would start instantiate the env and create a RLClient &

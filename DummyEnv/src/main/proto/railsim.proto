@@ -60,4 +60,3 @@ service RailsimFactory{
 
     rpc resetEnv (GrpcPort) returns (ConfirmationResponse) {};
 }
-

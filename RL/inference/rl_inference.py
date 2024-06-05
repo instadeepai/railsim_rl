@@ -5,13 +5,14 @@
 """
 
 from concurrent import futures
-from railsim_pb2_grpc import (
-    add_RailsimConnecterServicer_to_server,
-    RailsimConnecterServicer,
-)
-import railsim_pb2
+
 import grpc
 import numpy as np
+import railsim_pb2
+from railsim_pb2_grpc import (
+    RailsimConnecterServicer,
+    add_RailsimConnecterServicer_to_server,
+)
 from ray.rllib.policy.policy import Policy
 
 
@@ -22,12 +23,10 @@ class RailsimConnecter(RailsimConnecterServicer):
         print(request)
 
         # Use the restored policy for serving actions.
-        my_restored_policy = Policy.from_checkpoint(
-            "RL/checkpoint/p0"
-        )
+        my_restored_policy = Policy.from_checkpoint("RL/checkpoint/p0")
 
         action_map = railsim_pb2.ActionMap()
-        
+
         # Process the request and convert to a python object
         observation_dict = {}
         for key, observation in request.dictObservation.items():
@@ -41,7 +40,11 @@ class RailsimConnecter(RailsimConnecterServicer):
                     np.array(position_next_node, dtype=np.float32),
                 )
             )
-            action_map.dictAction[key] = np.argmax(my_restored_policy.compute_single_action(observation_dict[key])[2]['action_dist_inputs'])
+            action_map.dictAction[key] = np.argmax(
+                my_restored_policy.compute_single_action(observation_dict[key])[2][
+                    "action_dist_inputs"
+                ]
+            )
 
         return action_map
 

@@ -1,11 +1,12 @@
 import logging
 from concurrent import futures
-from grpc_comm.railsim_pb2_grpc import (
-    add_RailsimConnecterServicer_to_server,
-    RailsimConnecterServicer,
-)
-from grpc_comm import StepOutput, railsim_pb2
+
 import grpc
+from grpc_comm import StepOutput, railsim_pb2
+from grpc_comm.railsim_pb2_grpc import (
+    RailsimConnecterServicer,
+    add_RailsimConnecterServicer_to_server,
+)
 from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
 
 
@@ -14,7 +15,9 @@ class GrpcServer(RailsimConnecterServicer):
     def __init__(self, action_queue: Queue, step_output_queue: Queue) -> None:
         super().__init__()
         self.logger = logging.getLogger(__name__)
-        self.logger.debug(f"GrpcServer() -> id step_output_queue: {id(step_output_queue)}")
+        self.logger.debug(
+            f"GrpcServer() -> id step_output_queue: {id(step_output_queue)}"
+        )
 
         self.action_q = action_queue
         self.step_output_q = step_output_queue
@@ -52,7 +55,9 @@ class GrpcServer(RailsimConnecterServicer):
             converted_obs_d = {}
             converted_obs_d["obs_tree"] = list(step_output.observation.obsTree)
             converted_obs_d["train_state"] = list(step_output.observation.trainState)
-            converted_obs_d["position_next_node"] = list(step_output.observation.positionNextNode)
+            converted_obs_d["position_next_node"] = list(
+                step_output.observation.positionNextNode
+            )
             observation_d[aid] = converted_obs_d
 
         processed_step_output = StepOutput(

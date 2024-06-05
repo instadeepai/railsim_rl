@@ -11,12 +11,8 @@ import logging
 # import numpy as np
 import os
 import re
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    Optional,
-    Union,
-)
+from typing import TYPE_CHECKING, Dict, Optional, Union
+
 import ray
 from ray import air, tune
 from ray.air.integrations.wandb import WandbLoggerCallback
@@ -29,11 +25,9 @@ from ray.rllib.utils.framework import try_import_torch
 # )
 # from ray.rllib.utils.nested_dict import NestedDict
 from ray.rllib.utils.typing import ResultDict
+from ray.tune import CLIReporter
 
 # from ray.rllib.utils.error import UnsupportedSpaceException
-
-
-from ray.tune import CLIReporter
 
 
 if TYPE_CHECKING:
@@ -257,7 +251,7 @@ def run_rllib_example_script_experiment(
                     else MultiAgentEnvRunner
                 )
             ),
-            rollout_fragment_length=128
+            rollout_fragment_length=128,
         )
         .resources(
             # Old stack.
