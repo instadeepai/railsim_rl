@@ -22,10 +22,19 @@ def request_environment(free_port: int) -> None:
 
 
 def reset_env(free_port) -> list[str]:
-    logger.debug(f"Resetting the env with port {free_port} ...")
+    logger.debug(f"Resetting the env on port {free_port} ...")
     with grpc.insecure_channel("localhost:50051") as channel:
         stub = railsim_pb2_grpc.RailsimFactoryStub(channel)
         response: railsim_pb2.ProtoAgentIDs = stub.resetEnv(
+            railsim_pb2.ProtoGrpcPort(grpcPort=free_port)
+        )
+        return response.agentId
+
+def get_agent_ids(free_port) -> list[str]:
+    logger.debug(f"getting the agentIds for env on port {free_port} ...")
+    with grpc.insecure_channel("localhost:50051") as channel:
+        stub = railsim_pb2_grpc.RailsimFactoryStub(channel)
+        response: railsim_pb2.ProtoAgentIDs = stub.getAgentIds(
             railsim_pb2.ProtoGrpcPort(grpcPort=free_port)
         )
         return response.agentId

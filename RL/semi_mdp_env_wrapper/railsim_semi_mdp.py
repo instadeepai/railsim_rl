@@ -1,13 +1,11 @@
 import logging
 import math
-import multiprocessing as mp
 from typing import Any, Optional
-
 import gymnasium as gym
 import numpy as np
+from grpc_comm.grpc_server import GrpcServer
 from grpc_comm import StepOutput
-from grpc_comm.grpc_server import GrpcServer, serve
-from grpc_comm.railsim_factory_client import reset_env
+from grpc_comm.railsim_factory_client import reset_env, get_agent_ids
 from gymnasium.spaces import Box, Discrete
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from semi_mdp_env_wrapper.my_queue import MyQueue as Queue
@@ -21,11 +19,12 @@ class RailsimSemiMdp(MultiAgentEnv):
         depth_obs_tree: int,
         step_output_queue: Queue,
         action_queue: Queue,
+        grpc_server: GrpcServer,
         train_state_size: int = 4,
         query_node_position_size: int = 2,
         observation_tree_node_size: int = 6,
     ) -> None:
-
+        super().__init__()
         self.port = port
         self.logger = logging.getLogger(__name__)
         self.logger.debug(
@@ -42,8 +41,38 @@ class RailsimSemiMdp(MultiAgentEnv):
         # A list to track all terminated agents
         self.terminated_agents = []
 
-        # reset the environment
-        self.reset()
+        self._agent_ids = set(get_agent_ids(self.port))
+        self._define_obs_act_spaces()
+        self._obs_space_in_preferred_format = True
+        self._action_space_in_preferred_format = True
+
+        self.timestamp = None
+        self.selected_trainId = None
+        self.grpc_server = grpc_server
+
+
+    def _define_obs_act_spaces(self):
+        # define the observation space and action space
+        self.num_agents = len(self._agent_ids)
+
+        # define the observation space and action space based on the agent list
+        obs_space_single_agent = Box(
+            shape=(
+                self.observation_tree_node_size
+                * int((math.pow(2, self.depth_obs_tree + 1) - 1) / 1)
+                + self.train_state_size
+                + self.query_node_position_size,
+            ),
+            low=-math.inf,
+            high=math.inf,
+            dtype=np.float32,
+        )
+        self.observation_space = gym.spaces.Dict(
+            {aid: obs_space_single_agent for aid in self._agent_ids}
+        )
+        self.action_space = gym.spaces.Dict(
+            {aid: Discrete(3) for aid in self._agent_ids}
+        )
 
     def observation_space_sample(self, agent_ids: list = None):
         sample = self.observation_space.sample()
@@ -96,32 +125,25 @@ class RailsimSemiMdp(MultiAgentEnv):
         self.logger.debug("reset() -> reset the railsim environment")
 
         # send reset signal to railsim
-        agent_ids: list = reset_env(self.port)
-        self.agent_ids = agent_ids
-        self.num_agents = len(self.agent_ids)
+        self._agent_ids = reset_env(self.port)
+        self.num_agents = len(self._agent_ids)
 
         # define the observation space and action space based on the agent list
-        obs_space_single_agent = Box(
-            shape=(
-                self.observation_tree_node_size
-                * int((math.pow(2, self.depth_obs_tree + 1) - 1) / 1)
-                + self.train_state_size
-                + self.query_node_position_size,
-            ),
-            low=-math.inf,
-            high=math.inf,
-            dtype=np.float32,
-        )
-        self.observation_space = gym.spaces.Dict(
-            {aid: obs_space_single_agent for aid in self.agent_ids}
-        )
-        self.action_space = gym.spaces.Dict(
-            {aid: Discrete(3) for aid in self.agent_ids}
-        )
+        self._define_obs_act_spaces()
 
         # wait to get next state from queue
         self.logger.debug("reset() -> wait to get next state from queue")
         step_out: StepOutput = self.step_output_queue.get()
+        
+        # Update the global variables: Timestamp and trainId 
+        self.selected_trainId = None
+        self.timestamp = step_out.timestamp
+        for key, value in step_out.terminated_d.items():
+            if (not value):
+                self.selected_trainId = key 
+
+        # # Reset the action cache
+        # self.grpc_server.action_cache = {}
 
         # If there are no agents in the system, end the training loop
         terminated_agents = []
@@ -129,7 +151,7 @@ class RailsimSemiMdp(MultiAgentEnv):
             if terminated:
                 terminated_agents.append(aid)
 
-        if set(terminated_agents) == set(self.agent_ids):
+        if set(terminated_agents) == set(self._agent_ids):
             raise Exception(
                 "There are no active agents in the environment for this scenario"
             )
@@ -143,6 +165,7 @@ class RailsimSemiMdp(MultiAgentEnv):
 
         # reset the terminated_list
         self.terminated_agents = []
+        self.truncated_agents= []
 
         return obs_d, multi_agent_info
 
@@ -162,28 +185,43 @@ class RailsimSemiMdp(MultiAgentEnv):
             obs, reward, terminated, truncated, info
         """
         # Put the action in the action queue
-        self.logger.debug("step() -> push the action in the queue")
-        self.action_queue.put(action_dict)
+        self.logger.debug(f"step() -> push the action in the queue. Actions: {action_dict}. Timestamp: {self.timestamp}")
+        self.action_queue.put((self.timestamp, self.selected_trainId, action_dict))
 
         # keep polling the next state queue
-        self.logger.debug("step() -> waiting for next state")
+        self.logger.debug("step() -> waiting for observations")
         step_output: StepOutput = self.step_output_queue.get()
 
-        self.logger.debug("step() -> got the next state")
+        # Update the global variables: Timestamp and trainId 
+        self.timestamp = step_output.timestamp
+        self.selected_trainId = None
+        for key, value in step_output.terminated_d.items():
+            if (not value):
+                # store the agent id of the train whose observation will be
+                #  processed by the rl model
+                self.selected_trainId = key 
+
+        self.logger.debug(f"step() -> got observations for trains: {step_output.terminated_d.keys()}. Timestamp: {self.timestamp}")
 
         # Update the terminated_agents tracker
         for aid, terminated in step_output.terminated_d.items():
             if terminated:
                 self.terminated_agents.append(aid)
+        
+        # Update the truncated_agents tracker
+        for aid, truncated in step_output.truncated_d.items():
+            if truncated:
+                self.truncated_agents.append(aid)
 
         # Handle the case when all the agents are terminated
         terminated_d: dict = step_output.terminated_d
         truncated_d: dict = step_output.truncated_d
 
-        all_terminated: bool = set(self.agent_ids) == set(self.terminated_agents)
+        all_terminated: bool = set(self._agent_ids) == set(self.terminated_agents)
+        all_truncated: bool = set(self._agent_ids) == set(self.truncated_agents)
 
         terminated_d["__all__"] = all_terminated
-        truncated_d["__all__"] = all_terminated
+        truncated_d["__all__"] = all_truncated
 
         # extract observation from step_output and pad the observation tree
         obs_d = {}

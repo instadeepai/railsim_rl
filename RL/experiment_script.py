@@ -251,7 +251,7 @@ def run_rllib_example_script_experiment(
                     else MultiAgentEnvRunner
                 )
             ),
-            rollout_fragment_length=128,
+            rollout_fragment_length=12,
         )
         .resources(
             # Old stack.
@@ -267,10 +267,10 @@ def run_rllib_example_script_experiment(
         algo = config.build()
         for iter in range(args.stop_iters):
             results = algo.train()
-            print(f"R={results['sampler_results']['episode_reward_mean']}", end="")
-            # print(
-            #     f"policy loss: {results['learner_results']['p0']['policy_loss']}, value loss: {results['learner_results']['p0']['vf_loss']}"
-            # )
+            # print(f"R={results['sampler_results']['episode_reward_mean']}", end="")
+            print(
+                f"policy loss: {results['learner_results']['p0']['policy_loss']}, value loss: {results['learner_results']['p0']['vf_loss']}"
+            )
             if "evaluation" in results:
                 Reval = results["evaluation"]["sampler_results"]["episode_reward_mean"]
                 print(f" R(eval)={Reval}", end="")

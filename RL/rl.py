@@ -24,8 +24,9 @@ def create_env(args):
     with socketserver.TCPServer(("localhost", 0), None) as s:
         free_port = s.server_address[1]
 
+    action_cache = {}
     grpc_server = GrpcServer(
-        action_queue=action_queue, step_output_queue=step_output_queue
+        action_queue=action_queue, step_output_queue=step_output_queue, action_cache=action_cache
     )
     logger.debug(f"RL listening on port {free_port}")
     process_server: mp.Process = mp.Process(
@@ -40,7 +41,7 @@ def create_env(args):
     # Instantiate a new java environment
     request_environment(free_port=free_port)
 
-    wait_time = 10
+    wait_time = 5
     logger.debug(
         f"Waiting for the server to start for {wait_time} seconds before the environment simulation"
     )
@@ -52,6 +53,7 @@ def create_env(args):
         depth_obs_tree=2,
         step_output_queue=step_output_queue,
         action_queue=action_queue,
+        grpc_server=grpc_server
     )
 
     return railsim_env
@@ -88,7 +90,8 @@ if __name__ == "__main__":
                 "vf_share_layers": True,
             },
             vf_loss_coeff=0.005,
-            train_batch_size=512,
+            train_batch_size=24,
+            sgd_minibatch_size=12
         )
         .rl_module(
             rl_module_spec=MultiAgentRLModuleSpec(

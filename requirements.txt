@@ -1,6 +1,6 @@
 grpcio==1.64
 grpcio-tools
-gymnasium==0.28
+gymnasium==0.28.1
 numpy==1.26
 ray[rllib]==2.20
 torch==2.3
