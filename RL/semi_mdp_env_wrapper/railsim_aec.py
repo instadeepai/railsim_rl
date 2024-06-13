@@ -216,16 +216,12 @@ class railsim_aec(AECEnv, EzPickle):
 
         for r in self.rewards:
             self.rewards[r] = self.env.control_rewards[self.agent_name_mapping[r]]
+        
         if is_last:
             for r in self.rewards:
                 self.rewards[r] += self.env.last_rewards[self.agent_name_mapping[r]]
 
-        if self.env.frames >= self.env.max_cycles:
-            self.truncations = dict(zip(self.agents, [True for _ in self.agents]))
-        else:
-            self.terminations = dict(zip(self.agents, self.env.last_dones))
-
-        self._cumulative_rewards[self.agent_selection] = 0
+        # self._cumulative_rewards[self.agent_selection] = 0
         self.agent_selection = self._agent_selector.next()
         self._accumulate_rewards()
 
